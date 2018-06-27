@@ -26,6 +26,14 @@ var ExerciseSchema = new mongoose.Schema({
     }
 });
 
+ExerciseSchema.virtual('dateString').get(function() {
+    return new Date(this.date)
+        .toLocaleDateString('en-US', {
+            weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+        })
+        .split(',').join('');
+});
+
 var Exercise = mongoose.model('Exercise', ExerciseSchema);
 
 module.exports = { Exercise };
