@@ -1,23 +1,117 @@
-const express = require('express')
-const app = express()
-const bodyParser = require('body-parser')
+require('./config/config');
 
+const mongoose = require('./db/mongoose')
+const port = process.env.PORT || 3000;
+const _ = require('lodash');
+const express = require('express')
+const bodyParser = require('body-parser')
+const app = express()
 const cors = require('cors')
 
-const mongoose = require('mongoose')
-mongoose.connect(process.env.MLAB_URI || 'mongodb://localhost/exercise-track' )
+const { User } = require('./models/user');
+const { Exercise } = require('./models/exercise');
 
 app.use(cors())
-
 app.use(bodyParser.urlencoded({extended: false}))
 app.use(bodyParser.json())
-
 
 app.use(express.static('public'))
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });
 
+// Create new user
+app.post('/api/exercise/new-user', (req, res) => {
+    let body = _.pick(req.body, ['username']);
+    let user = new User({
+        username: body.username
+    });
+
+    // {"username":"a-new-user","_id":"BJRJV-eMQ"} or 400 username already taken
+    user.save().then((user) => {
+        res.send(user);
+    }).catch((e) => {
+        if (e.code === 11000) {
+            res.status(400).send('username already taken');
+        } else {
+            res.status(400).send(e);
+        }
+    });
+});
+
+// Add exercise for user and then return added exercise
+// {
+//    "username": "fcc-test-user",
+//    "description": "pullups",
+//    "duration": 1,
+//    "_id": "H14YKglfQ",
+//    "date": "Tue Jun 26 2018"
+// }
+app.post('/api/exercise/add', (req, res) => {
+    let body = _.pick(req.body, ['userId', 'description', 'duration', 'date']);
+
+    User.findOne({ _id: body.userId }).then((user) => {
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+        
+        let exercise = new Exercise({
+            _user: user._id,
+            description: body.description,
+            duration: body.duration,
+            date: body.date
+        });
+
+        let dateString = new Date(exercise.date)
+            .toLocaleDateString('en-US', {
+                weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
+            })
+            .split(',').join('');
+        
+        return exercise.save().then((exercise) => {
+            res.send({
+                '_id': user._id,                
+                'username': user.username,
+                'description': exercise.description,
+                'duration': exercise.duration,
+                'date': dateString
+            });
+        });
+    }).catch((e) => {
+        res.status(400).send(e.message);
+    });
+});
+
+// /api/exercise/log?{userId}[&from][&to][&limit]
+app.get('/api/exercise/log', (req, res) => {
+    // {
+    //   "_id":"H14YKglfQ","username":"fcc-test-user","count":2,
+    //   "log":[
+    //     {"description":"situps","duration":2,"date":"Tue Jun 26 2018"},
+    //     {"description":"pushups","duration":2,"date":"Tue Jun 26 2018"}
+    //   ]
+    // }
+    Exercise.find({
+        _user: req.query.userId
+    }).then((exercise) => {
+        res.send(exercise);
+    }).catch((e) => {
+        res.status(400).send(e);
+    });
+});
+
+// Get the id associated with the username
+app.get('/api/exercise/user/:username', (req, res) => {
+    User.findOne({ username: req.params.username }).then((user) => {
+        if (!user) {
+            // return Promise.reject('User not found');
+            return res.status(400).send('User not found');
+        }
+        res.send({ 'id': user._id });
+    }).catch((e) => {
+        res.status(400).send(e);
+    });
+});
 
 // Not found middleware
 app.use((req, res, next) => {
@@ -43,6 +137,6 @@ app.use((err, req, res, next) => {
     .send(errMessage)
 })
 
-const listener = app.listen(process.env.PORT || 3000, () => {
+const listener = app.listen(port, () => {
   console.log('Your app is listening on port ' + listener.address().port)
 })
