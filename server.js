@@ -62,19 +62,13 @@ app.post('/api/exercise/add', (req, res) => {
             date: body.date
         });
 
-        let dateString = new Date(exercise.date)
-            .toLocaleDateString('en-US', {
-                weekday: 'short', year: 'numeric', month: 'short', day: 'numeric'
-            })
-            .split(',').join('');
-        
         return exercise.save().then((exercise) => {
             res.send({
                 '_id': user._id,                
                 'username': user.username,
                 'description': exercise.description,
                 'duration': exercise.duration,
-                'date': dateString
+                'date': exercise.dateString
             });
         });
     }).catch((e) => {
@@ -83,6 +77,7 @@ app.post('/api/exercise/add', (req, res) => {
 });
 
 // /api/exercise/log?{userId}[&from][&to][&limit]
+// ?userId=H14YKglfQ
 app.get('/api/exercise/log', (req, res) => {
     // {
     //   "_id":"H14YKglfQ","username":"fcc-test-user","count":2,
