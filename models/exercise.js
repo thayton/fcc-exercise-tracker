@@ -1,10 +1,12 @@
 const mongoose = require('mongoose');
 const shortid = require('shortid');
+const _ = require('lodash');
 
 var ExerciseSchema = new mongoose.Schema({
     _user: { // Reference to the _id of the user that added this exercise
         type: String,
-        required: true
+        required: true,
+        ref: 'User'
     },
     description: {
         type: String,
@@ -24,6 +26,8 @@ var ExerciseSchema = new mongoose.Schema({
             message: '{ VALUE } Invalid date!'
         }
     }
+}, {
+    toObject: { virtuals: true }
 });
 
 ExerciseSchema.virtual('dateString').get(function() {
@@ -33,6 +37,13 @@ ExerciseSchema.virtual('dateString').get(function() {
         })
         .split(',').join('');
 });
+
+ExerciseSchema.methods.toJSON = function () {
+    var exercise = this;
+    var exerciseObject = exercise.toObject();
+
+    return _.pick(exerciseObject, ['description', 'duration', 'dateString']);
+};
 
 var Exercise = mongoose.model('Exercise', ExerciseSchema);
 

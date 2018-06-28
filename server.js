@@ -29,7 +29,7 @@ app.post('/api/exercise/new-user', (req, res) => {
 
     // {"username":"a-new-user","_id":"BJRJV-eMQ"} or 400 username already taken
     user.save().then((user) => {
-        res.send(user);
+        res.send(_.pick(user, ['_id', 'username']));
     }).catch((e) => {
         if (e.code === 11000) {
             res.status(400).send('username already taken');
@@ -63,12 +63,16 @@ app.post('/api/exercise/add', (req, res) => {
         });
 
         return exercise.save().then((exercise) => {
-            res.send({
-                '_id': user._id,                
-                'username': user.username,
-                'description': exercise.description,
-                'duration': exercise.duration,
-                'date': exercise.dateString
+            user.exercises.push(exercise);
+            
+            return user.save().then((user) => {
+                res.send({
+                    '_id': user._id,                
+                    'username': user.username,
+                    'description': exercise.description,
+                    'duration': exercise.duration,
+                    'date': exercise.dateString
+                });
             });
         });
     }).catch((e) => {
@@ -76,8 +80,10 @@ app.post('/api/exercise/add', (req, res) => {
     });
 });
 
-// /api/exercise/log?{userId}[&from][&to][&limit]
-// ?userId=H14YKglfQ
+/*
+ *  /api/exercise/log?{userId}[&from][&to][&limit]
+ *  /api/exercise/log?userId=H14YKglfQ
+ */
 app.get('/api/exercise/log', (req, res) => {
     // {
     //   "_id":"H14YKglfQ","username":"fcc-test-user","count":2,
@@ -86,13 +92,22 @@ app.get('/api/exercise/log', (req, res) => {
     //     {"description":"pushups","duration":2,"date":"Tue Jun 26 2018"}
     //   ]
     // }
-    Exercise.find({
-        _user: req.query.userId
-    }).then((exercise) => {
-        res.send(exercise);
-    }).catch((e) => {
-        res.status(400).send(e);
-    });
+    User.findById(req.query.userId)
+        .populate('exercises')
+        .then((user) => {
+            if (!user) {
+                return res.status(404).send('User not found');
+            }
+
+            res.send({
+                '_id': user.id,
+                'username': user.username,
+                'count': user.exercises.length,
+                'log': user.exercises
+            });
+        }).catch((e) => {
+            res.status(400).send(e);
+        });
 });
 
 // Get the id associated with the username
