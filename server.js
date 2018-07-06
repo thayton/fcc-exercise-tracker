@@ -85,29 +85,39 @@ app.post('/api/exercise/add', (req, res) => {
  *  /api/exercise/log?userId=H14YKglfQ
  */
 app.get('/api/exercise/log', (req, res) => {
-    // {
-    //   "_id":"H14YKglfQ","username":"fcc-test-user","count":2,
-    //   "log":[
-    //     {"description":"situps","duration":2,"date":"Tue Jun 26 2018"},
-    //     {"description":"pushups","duration":2,"date":"Tue Jun 26 2018"}
-    //   ]
-    // }
-    User.findById(req.query.userId)
-        .populate('exercises')
-        .then((user) => {
-            if (!user) {
-                return res.status(404).send('User not found');
-            }
+    var q = Exercise.find({'_user': req.query.userId}).populate('_user');
+    
+    if (req.query.from) {
+        fromDate = new Date(req.query.from.replace(/-/g, '/'));
+        q = q.where('date').gte(fromDate);
+    }
 
-            res.send({
-                '_id': user.id,
-                'username': user.username,
-                'count': user.exercises.length,
-                'log': user.exercises
-            });
-        }).catch((e) => {
-            res.status(400).send(e);
+    if (req.query.to) {
+        toDate = new Date(req.query.to.replace(/-/g, '/'));
+        q = q.where('date').lte(toDate);
+    }
+    
+    if (req.query.limit) {
+        q = q.limit(parseInt(req.query.limit));
+    }
+
+    Promise.all([
+        User.findOne({ _id: req.query.userId }),
+        q
+    ]).then((results) => {
+        var user = results[0];
+        var exercises = results[1];
+
+        res.send({
+            '_id': user.id,
+            'username': user.username,
+            'count': exercises.length,
+            'log': exercises
         });
+        
+    }).catch((e) => {
+        res.status(400).send(e.message);
+    });
 });
 
 // Get the id associated with the username
