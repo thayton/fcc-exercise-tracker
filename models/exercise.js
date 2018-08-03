@@ -2,6 +2,24 @@ const mongoose = require('mongoose');
 const shortid = require('shortid');
 const _ = require('lodash');
 
+const currentDate = () => {
+    var today = new Date();
+    var dd = today.getDate();
+    var mm = today.getMonth() + 1; 
+    var yy = today.getFullYear();
+
+    if (dd < 10) {
+        dd = '0' + dd
+    }
+
+    if (mm < 10) {
+        mm = '0' + mm
+    }
+
+    today = yy + '/' + mm + '/' + dd;
+    return new Date(today);
+};
+
 var ExerciseSchema = new mongoose.Schema({
     _user: { // Reference to the _id of the user that added this exercise
         type: String,
@@ -18,7 +36,7 @@ var ExerciseSchema = new mongoose.Schema({
     },
     date: { // "Tue Jun 26 2018"
         type: Date,
-        default: Date.now,
+        default: currentDate,
         validate: {
             validator: function (v) {
                 return (!isNaN(new Date(v).getTime()))

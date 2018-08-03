@@ -102,8 +102,7 @@ app.get('/api/exercise/log', (req, res) => {
     }
 
     Promise.all([
-        User.findOne({ _id: req.query.userId }),
-        q
+        User.findOne({ _id: req.query.userId }), q
     ]).then((results) => {
         var user = results[0];
         var exercises = results[1];
