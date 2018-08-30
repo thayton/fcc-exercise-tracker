@@ -54,6 +54,9 @@ app.post('/api/exercise/add', (req, res) => {
         if (!user) {
             return res.status(404).send('User not found');
         }
+
+        if (body.date === '')
+            body.date = undefined;
         
         let exercise = new Exercise({
             _user: user._id,
